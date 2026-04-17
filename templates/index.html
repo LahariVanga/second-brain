@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Second Brain</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f5f5f0; color: #1a1a1a; min-height: 100vh; }
+    .container { max-width: 720px; margin: 0 auto; padding: 24px 16px; }
+    h1 { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+    .subtitle { font-size: 13px; color: #888; margin-bottom: 24px; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid #e0e0e0; }
+    .tab { padding: 8px 16px; font-size: 13px; cursor: pointer; background: none; border: none;
+           border-bottom: 2px solid transparent; color: #888; margin-bottom: -1px; }
+    .tab.active { color: #1a8a5a; border-bottom-color: #1a8a5a; font-weight: 500; }
+
+    /* Cards */
+    .card { background: white; border-radius: 12px; border: 1px solid #e8e8e8; padding: 16px 20px; margin-bottom: 12px; }
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* Goals */
+    .goal-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0;
+                 border-bottom: 1px solid #f0f0f0; }
+    .goal-item:last-child { border-bottom: none; }
+    .checkbox { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #ccc;
+                cursor: pointer; flex-shrink: 0; margin-top: 2px; display: flex;
+                align-items: center; justify-content: center; }
+    .checkbox.done { background: #1a8a5a; border-color: #1a8a5a; color: white; font-size: 11px; }
+    .goal-body { flex: 1; }
+    .goal-title { font-size: 14px; font-weight: 500; }
+    .goal-title.done { text-decoration: line-through; color: #aaa; }
+    .goal-meta { font-size: 12px; color: #999; margin: 2px 0 6px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px;
+             background: #e1f5ee; color: #0f6e56; font-weight: 500; }
+    .progress-row { display: flex; align-items: center; gap: 8px; }
+    .progress-row input[type=range] { flex: 1; accent-color: #1a8a5a; }
+    .progress-row span { font-size: 12px; color: #1a8a5a; font-weight: 500; min-width: 30px; }
+    .del-btn { background: none; border: none; cursor: pointer; color: #ccc; font-size: 18px; padding: 0 4px; }
+    .del-btn:hover { color: #e05c5c; }
+
+    /* Stats */
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+    .stat { background: #f8f8f5; border-radius: 10px; padding: 12px; text-align: center; }
+    .stat-num { font-size: 24px; font-weight: 600; color: #1a8a5a; }
+    .stat-label { font-size: 11px; color: #999; margin-top: 2px; }
+
+    /* Daily tip */
+    .tip-box { background: #e8f7f0; border-left: 3px solid #1a8a5a; border-radius: 8px;
+               padding: 12px 16px; margin-bottom: 16px; }
+    .tip-box p { font-size: 13px; color: #0f5e3e; line-height: 1.5; }
+    .tip-label { font-size: 11px; color: #1a8a5a; font-weight: 500; margin-bottom: 4px; }
+
+    /* Add goal form */
+    .form-group { margin-bottom: 12px; }
+    .form-group label { font-size: 12px; color: #666; display: block; margin-bottom: 4px; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 8px;
+      font-size: 14px; font-family: inherit; background: white; color: #1a1a1a;
+    }
+    .form-group textarea { resize: vertical; }
+    .btn-primary { width: 100%; padding: 11px; background: #1a8a5a; color: white; border: none;
+                   border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; }
+    .btn-primary:hover { background: #177a4f; }
+
+    /* Chat */
+    .chat-window { height: 340px; overflow-y: auto; display: flex; flex-direction: column;
+                   gap: 10px; margin-bottom: 12px; padding: 4px; }
+    .msg { max-width: 82%; }
+    .msg.user { align-self: flex-end; }
+    .msg.ai { align-self: flex-start; }
+    .bubble { padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.5; }
+    .msg.user .bubble { background: #1a8a5a; color: white; border-bottom-right-radius: 4px; }
+    .msg.ai .bubble { background: #f0f0ec; color: #1a1a1a; border-bottom-left-radius: 4px; }
+    .msg-time { font-size: 11px; color: #bbb; margin-top: 3px; padding: 0 4px; }
+    .msg.user .msg-time { text-align: right; }
+    .input-row { display: flex; gap: 8px; }
+    .input-row textarea { flex: 1; padding: 10px 12px; border: 1px solid #ddd; border-radius: 12px;
+                          font-family: inherit; font-size: 14px; resize: none; height: 44px; }
+    .send-btn { width: 44px; height: 44px; background: #1a8a5a; border: none; border-radius: 50%;
+                cursor: pointer; color: white; font-size: 18px; flex-shrink: 0; }
+    .send-btn:disabled { opacity: 0.4; cursor: default; }
+    .quick-prompts { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+    .qp { padding: 5px 11px; border-radius: 20px; font-size: 12px; cursor: pointer;
+          border: 1px solid #ddd; background: white; color: #666; }
+    .qp:hover { border-color: #1a8a5a; color: #1a8a5a; }
+
+    .empty { text-align: center; color: #bbb; font-size: 13px; padding: 2rem 0; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>🧠 Second Brain</h1>
+  <p class="subtitle">Your AI goal partner</p>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('dashboard', this)">Dashboard</button>
+    <button class="tab" onclick="showTab('goals', this)">Goals</button>
+    <button class="tab" onclick="showTab('chat', this)">AI Coach</button>
+    <button class="tab" onclick="showTab('add', this)">+ Add Goal</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="tab-dashboard" class="screen active">
+    <div class="stats">
+      <div class="stat"><div class="stat-num" id="s-total">0</div><div class="stat-label">Total goals</div></div>
+      <div class="stat"><div class="stat-num" id="s-done">0</div><div class="stat-label">Completed</div></div>
+      <div class="stat"><div class="stat-num" id="s-pct">0%</div><div class="stat-label">Avg progress</div></div>
+    </div>
+    <div class="tip-box"><div class="tip-label">AI Coach tip</div><p id="daily-tip">Add your first goal to get started.</p></div>
+    <div class="card">
+      <div style="font-size:15px;font-weight:500;margin-bottom:12px;">Active goals</div>
+      <div id="dash-goals"><div class="empty">No goals yet.</div></div>
+    </div>
+  </div>
+
+  <!-- GOALS -->
+  <div id="tab-goals" class="screen">
+    <div id="all-goals"><div class="empty">No goals yet. Use + Add Goal.</div></div>
+  </div>
+
+  <!-- CHAT -->
+  <div id="tab-chat" class="screen">
+    <div class="card" style="padding:12px 16px;">
+      <div class="chat-window" id="chat-window">
+        <div class="msg ai">
+          <div class="bubble">Hi! I'm your AI coach. Tell me about a goal, ask for motivation, or check in on your progress — I'm here to help you stay on track!</div>
+          <div class="msg-time">AI Coach</div>
+        </div>
+      </div>
+      <div class="quick-prompts">
+        <div class="qp" onclick="quickSend(this)">How am I doing?</div>
+        <div class="qp" onclick="quickSend(this)">What should I focus on today?</div>
+        <div class="qp" onclick="quickSend(this)">I'm feeling stuck</div>
+        <div class="qp" onclick="quickSend(this)">Motivate me</div>
+      </div>
+      <div class="input-row">
+        <textarea id="chat-input" placeholder="Talk to your coach..." onkeydown="handleKey(event)"></textarea>
+        <button class="send-btn" id="send-btn" onclick="sendMessage()">&#10148;</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD GOAL -->
+  <div id="tab-add" class="screen">
+    <div class="card">
+      <div style="font-size:15px;font-weight:500;margin-bottom:16px;">New goal</div>
+      <div class="form-group">
+        <label>Goal title *</label>
+        <input type="text" id="g-title" placeholder="e.g. Read 12 books this year" />
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="g-cat">
+          <option>Health</option>
+          <option>Career</option>
+          <option>Learning</option>
+          <option>Finance</option>
+          <option>Mindset</option>
+          <option>Relationships</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Deadline (optional)</label>
+        <input type="date" id="g-deadline" />
+      </div>
+      <div class="form-group">
+        <label>Why does this matter to you?</label>
+        <textarea id="g-why" rows="2" placeholder="Your 'why' keeps you going on hard days..."></textarea>
+      </div>
+      <button class="btn-primary" onclick="addGoal()">Add goal</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ─── State ───────────────────────────────────────────────
+  let goals = JSON.parse(localStorage.getItem('sb_goals') || '[]');
+  let chatHistory = [];
+
+  function saveGoals() {
+    localStorage.setItem('sb_goals', JSON.stringify(goals));
+  }
+
+  // ─── Tabs ─────────────────────────────────────────────────
+  function showTab(name, btn) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    btn.classList.add('active');
+    if (name === 'dashboard') renderDashboard();
+    if (name === 'goals') renderGoals();
+  }
+
+  // ─── Add goal ─────────────────────────────────────────────
+  function addGoal() {
+    const title = document.getElementById('g-title').value.trim();
+    if (!title) { alert('Please enter a goal title.'); return; }
+    goals.push({
+      id: Date.now(),
+      title,
+      category: document.getElementById('g-cat').value,
+      deadline: document.getElementById('g-deadline').value,
+      why: document.getElementById('g-why').value.trim(),
+      progress: 0,
+      done: false,
+      created: new Date().toISOString()
+    });
+    saveGoals();
+    document.getElementById('g-title').value = '';
+    document.getElementById('g-why').value = '';
+    document.getElementById('g-deadline').value = '';
+    // Switch to dashboard
+    document.querySelectorAll('.tab')[0].click();
+  }
+
+  // ─── Toggle done ──────────────────────────────────────────
+  function toggleDone(id) {
+    const g = goals.find(g => g.id === id);
+    if (g) { g.done = !g.done; if (g.done) g.progress = 100; saveGoals(); renderDashboard(); renderGoals(); }
+  }
+
+  // ─── Update progress ──────────────────────────────────────
+  function updateProgress(id, val) {
+    const g = goals.find(g => g.id === id);
+    if (g) { g.progress = parseInt(val); g.done = g.progress === 100; saveGoals(); renderDashboard(); }
+  }
+
+  // ─── Delete goal ──────────────────────────────────────────
+  function deleteGoal(id) {
+    if (!confirm('Delete this goal?')) return;
+    goals = goals.filter(g => g.id !== id);
+    saveGoals();
+    renderGoals();
+    renderDashboard();
+  }
+
+  // ─── Render dashboard ─────────────────────────────────────
+  function renderDashboard() {
+    const total = goals.length;
+    const done = goals.filter(g => g.done).length;
+    const avgPct = total > 0 ? Math.round(goals.reduce((s, g) => s + g.progress, 0) / total) : 0;
+    document.getElementById('s-total').textContent = total;
+    document.getElementById('s-done').textContent = done;
+    document.getElementById('s-pct').textContent = avgPct + '%';
+
+    const tips = total === 0
+      ? "Add your first goal and I'll guide you every step of the way."
+      : done === total
+      ? "All goals completed! Set new ones to keep growing."
+      : `You're ${avgPct}% of the way there. Focus on "${goals.find(g => !g.done)?.title}" today.`;
+    document.getElementById('daily-tip').textContent = tips;
+
+    const active = goals.filter(g => !g.done).slice(0, 3);
+    const el = document.getElementById('dash-goals');
+    el.innerHTML = active.length === 0
+      ? `<div class="empty">${total > 0 ? 'All goals completed!' : 'No goals yet.'}</div>`
+      : active.map(goalHTML).join('');
+  }
+
+  // ─── Render goals tab ─────────────────────────────────────
+  function renderGoals() {
+    const el = document.getElementById('all-goals');
+    el.innerHTML = goals.length === 0
+      ? `<div class="empty">No goals yet. Use + Add Goal.</div>`
+      : goals.map(g => `<div class="card">${goalHTML(g)}</div>`).join('');
+  }
+
+  function goalHTML(g) {
+    return `
+      <div class="goal-item">
+        <div class="checkbox ${g.done ? 'done' : ''}" onclick="toggleDone(${g.id})">${g.done ? '✓' : ''}</div>
+        <div class="goal-body">
+          <div class="goal-title ${g.done ? 'done' : ''}">${g.title}</div>
+          <div class="goal-meta"><span class="badge">${g.category}</span>${g.deadline ? ' · Due ' + g.deadline : ''}</div>
+          ${g.why ? `<div style="font-size:12px;color:#aaa;font-style:italic;margin-bottom:6px;">"${g.why}"</div>` : ''}
+          <div class="progress-row">
+            <input type="range" min="0" max="100" value="${g.progress}" oninput="updateProgress(${g.id}, this.value); this.nextElementSibling.textContent = this.value + '%'">
+            <span>${g.progress}%</span>
+          </div>
+        </div>
+        <button class="del-btn" onclick="deleteGoal(${g.id})">×</button>
+      </div>`;
+  }
+
+  // ─── Chat ─────────────────────────────────────────────────
+  async function sendMessage() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+
+    appendBubble('user', text);
+    chatHistory.push({ role: 'user', content: text });
+
+    const btn = document.getElementById('send-btn');
+    btn.disabled = true;
+    const typingId = appendBubble('ai', '...');
+
+    try {
+      const res = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, goals: goals, history: chatHistory.slice(-10) })
+      });
+      const data = await res.json();
+      const reply = data.reply || "I'm here to help! Tell me about your goals.";
+      updateBubble(typingId, reply);
+      chatHistory.push({ role: 'assistant', content: reply });
+    } catch (e) {
+      updateBubble(typingId, "Couldn't reach the AI. Check that your server is running.");
+    }
+    btn.disabled = false;
+  }
+
+  let msgId = 0;
+  function appendBubble(role, text) {
+    const id = 'msg-' + (++msgId);
+    const win = document.getElementById('chat-window');
+    const div = document.createElement('div');
+    div.className = 'msg ' + role;
+    div.id = id;
+    div.innerHTML = `<div class="bubble">${text}</div>
+      <div class="msg-time">${role === 'user' ? 'You' : 'AI Coach'} · ${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</div>`;
+    win.appendChild(div);
+    win.scrollTop = win.scrollHeight;
+    return id;
+  }
+
+  function updateBubble(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.querySelector('.bubble').textContent = text;
+  }
+
+  function quickSend(el) {
+    document.getElementById('chat-input').value = el.textContent;
+    sendMessage();
+  }
+
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  }
+
+  // ─── Init ─────────────────────────────────────────────────
+  renderDashboard();
+</script>
+</body>
+</html>
